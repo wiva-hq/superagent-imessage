@@ -1,5 +1,5 @@
 # Checks and publishes superagent-imessage for a build tag v<version>-build.<N>, on GitHub's runners in the public repo
-# (wiva-hq/superagent-imessage): the bundle's and the bridge's `pnpm check`, then a GitHub pre-release with notes
+# (wiva-hq/superagent-imessage): the bundle's and the bridge's `pnpm check`, then a GitHub release, marked Latest, with notes
 # generated since the previous tag. The private repo's release pipeline pushes the tag; this does nothing elsewhere.
 name: Build
 
@@ -61,5 +61,5 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version="${TAG#v}"; version="${version%-build.*}"
-          gh release create "$TAG" --verify-tag --prerelease --generate-notes \
+          gh release create "$TAG" --verify-tag --latest --generate-notes \
             --title "superagent-imessage $version (build ${TAG##*-build.})"

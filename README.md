@@ -14,7 +14,7 @@
   <a href="https://photon.codes/docs/beta/photon.md"><img alt="iMessage: Photon v2" src="https://img.shields.io/badge/iMessage-Photon%20v2-34c759?style=flat-square"></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img alt="DeepSeek Harness 0.2.1-rc.3" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.1--rc.3-4d6bfe?style=flat-square"></a>
   <img alt="Hosts: macOS and Linux" src="https://img.shields.io/badge/hosts-macOS%20·%20Linux-52525b?style=flat-square">
-  <img alt="Status: experimental" src="https://img.shields.io/badge/status-0.1.0%20experimental-f59e0b?style=flat-square">
+  <img alt="Status: experimental" src="https://img.shields.io/badge/status-0.2.0%20experimental-f59e0b?style=flat-square">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
 </p>
 
