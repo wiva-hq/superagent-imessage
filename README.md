@@ -25,8 +25,6 @@
 </p>
 
 > **Experimental.** A Wiva experiment, not an official DeepSeek project and not affiliated with DeepSeek. It builds on a research prototype whose DeepSeek Harness dependencies are alpha releases, and the iMessage path has not yet been verified end to end. The iMessage code was written with Claude Code and reviewed by the Wiva team. Review it before you run it.
->
-> **Experimental Project.** Initiated by Wiva, it is not an official DeepSeek project and has no affiliation with DeepSeek. It's based on a research prototype, and the DeepSeek Harness package it relies on is still in alpha; the iMessage link has not undergone end-to-end verification. The iMessage portion of the code was written by Claude Code and reviewed by the Wiva team. Please review it yourself before running.
 
 ---
 
