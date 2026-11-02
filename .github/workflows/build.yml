@@ -1,0 +1,65 @@
+# Checks and publishes superagent-imessage for a build tag v<version>-build.<N>, on GitHub's runners in the public repo
+# (wiva-hq/superagent-imessage): the bundle's and the bridge's `pnpm check`, then a GitHub pre-release with notes
+# generated since the previous tag. The private repo's release pipeline pushes the tag; this does nothing elsewhere.
+name: Build
+
+on:
+  push:
+    tags: ['v*-build.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    if: github.repository == 'wiva-hq/superagent-imessage'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+  bridge:
+    if: github.repository == 'wiva-hq/superagent-imessage'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: bridge
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: bridge/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+          cache-dependency-path: bridge/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+  publish:
+    needs: [bundle, bridge]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"; version="${version%-build.*}"
+          gh release create "$TAG" --verify-tag --prerelease --generate-notes \
+            --title "superagent-imessage $version (build ${TAG##*-build.})"

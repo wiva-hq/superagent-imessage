@@ -1,0 +1,5 @@
+packages: []
+allowBuilds:
+  better-sqlite3: true
+  # Its install script only prints a version notice; the library works without it.
+  protobufjs: false

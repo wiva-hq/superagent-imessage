@@ -1,0 +1,49 @@
+# CI on GitHub-hosted runners: the bundle's typecheck, tests and build, and the bridge's typecheck and tests.
+# Pull requests never reach the self-hosted Mac; only deploy.yml runs there, after CI passes on main.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+  bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: bridge
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: bridge/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+          cache-dependency-path: bridge/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      # The bin runs the TypeScript sources through Node's type stripping; off macOS it must fail with the JSON error shape.
+      - name: Bridge CLI answers in the Source's error shape
+        run: |
+          out=$(./bin/imsg-bridge pull --json 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q '"error":{"code":500'

@@ -1,0 +1,46 @@
+# CD on the agent's host: a self-hosted runner labelled `imsg-agent` deploys each commit of main that passed CI.
+#
+# The runner must be registered to this repository only, on the host that runs DeepSeek Harness (and, in local mode,
+# Messages), under the same user. Never attach it to a public repository's pull requests: this workflow runs only on `workflow_run` of CI
+# for pushes to main (code already merged), or by hand, and the `production` environment can require an approval.
+#
+# Repository variables: DEPLOY_DIR (the checkout the service runs from), STATE_DIR (the bundle's stateDir), optionally
+# DEPLOY_NOTIFY_CHAT (an iMessage chat id that hears about each deploy) and DSH_SUPERAGENT_PROFILE.
+name: Deploy
+#
+# Automatic deploys are off until a runner is registered: uncomment workflow_run to deploy each commit of main that passed CI.
+on:
+  # workflow_run:
+  #   workflows: [CI]
+  #   types: [completed]
+  #   branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit to deploy (default: the head of main)'
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: deploy-mac
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # Any OS: a Mac for local mode, or a Linux host in cloud mode.
+    runs-on: [self-hosted, imsg-agent]
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha || github.event.workflow_run.head_sha || github.sha }}
+      - name: Deploy
+        env:
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          STATE_DIR: ${{ vars.STATE_DIR }}
+          DEPLOY_NOTIFY_CHAT: ${{ vars.DEPLOY_NOTIFY_CHAT }}
+          DSH_SUPERAGENT_PROFILE: ${{ vars.DSH_SUPERAGENT_PROFILE || 'superagent' }}
+        run: scripts/deploy-mac.sh "$(git rev-parse HEAD)"
