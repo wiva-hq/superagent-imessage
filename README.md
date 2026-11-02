@@ -49,15 +49,27 @@ A real run, on 2 November 2026: a phone texting a shared Photon v2 line, with th
 [a public ROS 2 repository](https://github.com/Ltcc0/ros2-turtlesim-magic-button) and the DeepSeek model of the
 operator's account.
 
+<p align="center">
+  <img src="docs/images/imessage-run.jpg" width="680" alt="The iMessage chat: a request to add a README.md, the agent's acknowledgement, and its reply with the pull request's link">
+</p>
+<p align="center">
+  <img src="docs/images/pull-request.png" width="680" alt="The repository's open pull request, Add README.md from iMessage">
+</p>
+
+Six seconds to acknowledge, 44 to [a pull request](https://github.com/Ltcc0/ros2-turtlesim-magic-button/pull/1)
+that adds exactly that file and line, left for a person to merge. A plain “Hello from iMessage” sent a minute before
+was judged a greeting with nothing to do, so the agent stayed silent: it speaks only when someone asked for something.
+
+<details>
+<summary>The messages, as the line recorded them</summary>
+
 | Time (UTC) | | Message |
 | --- | --- | --- |
 | 05:58:35 | 📱 You | please add a README.md to this repo with one line: Hello from iMessage |
 | 05:58:41 | 🤖 Agent | On it: adding a README.md to this repo containing the single line “Hello from iMessage”. |
 | 05:59:19 | 🤖 Agent | PR #1 https://github.com/Ltcc0/ros2-turtlesim-magic-button/pull/1 is ready for review: it adds a root README.md with the single line “Hello from iMessage”. It needs a person to merge it. |
 
-Six seconds to acknowledge, 44 to [a pull request](https://github.com/Ltcc0/ros2-turtlesim-magic-button/pull/1)
-that adds exactly that file and line, left for a person to merge. A plain “Hello from iMessage” sent a minute before
-was judged a greeting with nothing to do, so the agent stayed silent: it speaks only when someone asked for something.
+</details>
 
 ## Built on
 
