@@ -24,7 +24,7 @@
   <a href="https://github.com/wiva-hq/superagent-imessage/issues/new">Report an issue</a>
 </p>
 
-> **Experimental.** A Wiva experiment, not an official DeepSeek project and not affiliated with DeepSeek. It builds on a research prototype whose DeepSeek Harness dependencies are alpha releases, and the iMessage path has not yet been verified end to end. The iMessage code was written with Claude Code and reviewed by the Wiva team. Review it before you run it.
+> **Experimental.** A Wiva experiment, not an official DeepSeek project and not affiliated with DeepSeek. It builds on a research prototype whose DeepSeek Harness dependencies are alpha releases. The iMessage code was written with Claude Code and reviewed by the Wiva team. Review it before you run it.
 
 ---
 
