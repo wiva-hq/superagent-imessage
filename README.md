@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/brand/wiva-mark.svg" width="72" height="72" alt="Wiva">
+  <img src="design/brand/superagent-imessage-mark.svg" width="72" height="72" alt="superagent-imessage">
 </p>
 
 <h1 align="center">superagent-imessage</h1>
@@ -126,5 +126,5 @@ lands, with you credited as a co-author.
 ---
 
 <p align="center"><sub>
-  <a href="LICENSE">MIT License</a> · made by <a href="https://wiva.io"><img src="design/brand/wiva-mark.svg" width="11" height="11" alt=""> <b>Wiva, Inc.</b></a> · built on <a href="https://github.com/deepseek-ai/dsh-superagent-prototype">dsh-superagent</a> by DeepSeek and iMessage SDKs by <a href="https://photon.codes">Photon</a>
+  <a href="LICENSE">MIT License</a> · made by <a href="https://wiva.io"><img src="design/brand/superagent-imessage-mark.svg" width="11" height="11" alt=""> <b>Wiva, Inc.</b></a> · built on <a href="https://github.com/deepseek-ai/dsh-superagent-prototype">dsh-superagent</a> by DeepSeek and iMessage SDKs by <a href="https://photon.codes">Photon</a>
 </sub></p>
