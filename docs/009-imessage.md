@@ -7,24 +7,24 @@ This document adds iMessage as a Source and a Mac as the place the agent runs an
 | Part | Where | What it does |
 | --- | --- | --- |
 | `dsh-superagent` with `dsh-superagent/imessage-watch` | The agent's Mac, in the DeepSeek Harness profile | Polls `imsg-bridge pull`, turns messages into Triggers, replies through `imsg-bridge reply` |
-| `imsg-bridge` (`bridge/`) | The same host, as the same user | In local mode, reads `~/Library/Messages/chat.db` and sends through Messages.app with Photon's [imessage-kit](https://github.com/photon-hq/imessage-kit). In cloud mode, reads the journal that `imsg-bridge serve` keeps from [Photon Spectrum](https://github.com/photon-hq/spectrum-ts) |
+| `imsg-bridge` (`bridge/`) | The same host, as the same user | In local mode, reads `~/Library/Messages/chat.db` and sends through Messages.app with Photon's [imessage-kit](https://github.com/photon-hq/imessage-kit). In cloud mode, reads the journal that `imsg-bridge serve` keeps from [Photon Spectrum](https://github.com/photon-hq/spectrum-ts). In advanced mode, calls Photon's [Advanced iMessage](https://github.com/photon-hq/advanced-imessage-ts) server over gRPC. In photon mode, calls Photon's [v2 API](https://photon.codes/docs/beta/photon.md) over HTTPS |
 | CI (`.github/workflows/ci.yml`) | GitHub-hosted Ubuntu runners | The bundle's `pnpm check` and the bridge's `pnpm check` on every push and pull request |
-| CD (`.github/workflows/deploy.yml`) | A self-hosted runner on that host, labelled `imsg-agent`: a Mac in local mode, any OS in cloud mode | Deploys each commit of `main` that passed CI with `scripts/deploy-mac.sh` |
+| CD (`.github/workflows/deploy.yml`) | A self-hosted runner on that host, labelled `imsg-agent`: a Mac in local mode, any OS in the other modes | Deploys each commit of `main` that passed CI with `scripts/deploy-mac.sh` |
 
-## Two modes
+## Four modes
 
-`imsg-bridge` reaches iMessage in one of two ways, chosen by `IMSG_BRIDGE_MODE`. The Source cannot tell them apart: both answer the same commands with the same JSON.
+`imsg-bridge` reaches iMessage in one of four ways, chosen by `IMSG_BRIDGE_MODE`. The Source cannot tell them apart: each answers the same commands with the same JSON.
 
-| | `local` (default) | `cloud` |
-| --- | --- | --- |
-| iMessage line | The agent's own Apple ID, signed in to Messages | A line Photon allocates to your Spectrum project |
-| Host | A Mac that stays logged in | Any host with Node 22.18 or later, Linux included |
-| Runs | Only the short commands | `imsg-bridge serve` beside the service, plus the short commands |
-| History for assessments | All of `chat.db` | What `serve` has seen since it started, kept 30 days (`IMSG_BRIDGE_KEEP_DAYS`) |
-| Starting a conversation | Anyone the Apple ID can message | On a shared line, only someone who texted the line first (the bridge answers 410 otherwise) |
-| Cost and limits | None beyond Apple's | Photon's plan; the free tier caps messages per day |
+| | `local` (default) | `cloud` | `advanced` | `photon` |
+| --- | --- | --- | --- | --- |
+| iMessage line | The agent's own Apple ID, signed in to Messages | A line Photon allocates to your Spectrum project | A line on Photon's Advanced iMessage server, shared or dedicated | A line in your Photon v2 project, shared or dedicated |
+| Host | A Mac that stays logged in | Any host with Node 22.18 or later, Linux included | Any host with Node 22.18 or later, Linux included | Any host with Node 22.18 or later, Linux included |
+| Runs | Only the short commands | `imsg-bridge serve` beside the service, plus the short commands | Only the short commands; the server holds the line | Only the short commands; Photon holds the line |
+| History for assessments | All of `chat.db` | What `serve` has seen since it started, kept 30 days (`IMSG_BRIDGE_KEEP_DAYS`) | The server's history and event log, including messages that arrived while the service was down | Photon's stored messages, including those that arrived while the service was down |
+| Starting a conversation | Anyone the Apple ID can message | On a shared line, only someone who texted the line first (the bridge answers 410 otherwise) | Anyone the line can message, within Photon's limits for new contacts | On a shared line, only someone who texted the line first (410 otherwise); on a dedicated line, anyone |
+| Cost and limits | None beyond Apple's | Photon's plan; the free tier caps messages per day | Photon's plan and its sending limits | Photon's plan |
 
-In local mode the agent needs its own Apple ID signed in to Messages on that Mac. In cloud mode it needs a Spectrum project from [app.photon.codes](https://app.photon.codes). Either way, people text the agent's line; its own messages are the agent's, and the Source never makes a Trigger of them.
+In local mode the agent needs its own Apple ID signed in to Messages on that Mac. In cloud mode it needs a Spectrum project from [app.photon.codes](https://app.photon.codes). In advanced mode it needs the address of an Advanced iMessage server and a token it accepts, both from Photon. In photon mode it needs a Photon v2 project with an iMessage line, from [app.beta.photon.codes](https://app.beta.photon.codes), and a project API key. In every mode, people text the agent's line; its own messages are the agent's, and the Source never makes a Trigger of them.
 
 ## The mapping
 
@@ -57,6 +57,10 @@ The cursor is the last row taken and its time. Each pull looks five minutes behi
 In cloud mode, `imsg-bridge serve` holds the Spectrum connection: it appends every message it sees, people's and the agent's own, to `~/.imsg-bridge/journal.jsonl`, numbered by `rowId`, and reconnects with a backoff from 1 to 60 seconds when the stream drops. `pull`, `thread` and `chats` read that journal, so they work while `serve` reconnects. `reply` posts to `serve` on `127.0.0.1` (`IMSG_BRIDGE_PORT`, default 8790) with the token `serve` writes to `~/.imsg-bridge/serve.json`, readable only by its user; while `serve` is down, `reply` answers 503 and the Outbox retries. Spectrum's telemetry is off. A message that arrives while `serve` is down is not in the journal: Spectrum does not replay a stream, so keep `serve` running as a service.
 
 Neither Messages.app nor Spectrum has an idempotency key, so the bridge keeps one: `~/.imsg-bridge/ledger.json` (or `$IMSG_BRIDGE_HOME`) records a key as pending before the send and as sent after it. A key left pending by a crash counts as sent when the chat (in cloud mode, the journal) already holds the agent's message with the same text, and is sent again otherwise. The Outbox's retries therefore post a reply at most once in the usual case and never lose it.
+
+In advanced mode the server does this itself. `reply` turns the key into the send's `clientMessageId`, and the server answers a repeated one as a duplicate, which the bridge reports as `duplicate: true`, so no ledger is kept. `pull` reads the server's durable event log: its cursor is the last event sequence taken, so messages that arrive while the service is down come on the next pull. A first pull without a cursor reads the log to its head once, without answering any items, so turning the Source on never replays the line's history.
+
+In photon mode, Photon does the same. `reply` sends with the key as the request's `idempotency-key`; Photon answers a repeated one with the message it already took and `Idempotent-Replayed: true`, reported as `duplicate: true`. `pull` lists the project's iMessage messages created since its cursor's time, looking five minutes further back because Photon's listing is eventually consistent; the cursor also carries the ids it took in that window, so nothing is answered twice. A first pull without a cursor starts at the present. Replies go out as the line's agent user, found by `GET /users`; `PHOTON_IMESSAGE_LINE` picks the line when the project has several. `thread` reads a dedicated line's chat by its resource; a shared line has no resource of the project's, so it reads the chat from the agent's perspective, which takes no time bounds, and applies `before` itself over the newest five pages.
 
 ## Install on the Mac
 
@@ -92,6 +96,30 @@ Neither Messages.app nor Spectrum has an idempotency key, so the bridge keeps on
 4. Give the service `IMSG_BRIDGE_MODE=cloud` and `IMSG_BRIDGE_CLI` (the absolute path of `bridge/bin/imsg-bridge`), so its calls read the same journal. The credentials stay with `serve` only.
 5. Text the line from your phone, then check that `IMSG_BRIDGE_MODE=cloud bridge/bin/imsg-bridge chats --json` lists the chat. Continue with steps 5 and 6 of the local install.
 
+## Install in advanced mode
+
+1. Get the address of an Advanced iMessage server and a token it accepts from Photon, and the line's number.
+2. Install as in [006 Deployment](006-deployment.md), then `(cd bridge && pnpm install --frozen-lockfile)`.
+3. Write `IMSG_BRIDGE_MODE=advanced`, `PHOTON_IMESSAGE_ADDRESS` and `PHOTON_IMESSAGE_TOKEN` to `~/.imsg-bridge/bridge.env` (see [Credentials](#credentials)), and give the service `IMSG_BRIDGE_CLI` (the absolute path of `bridge/bin/imsg-bridge`). Set `PHOTON_IMESSAGE_TLS=false` only for a server on the same machine during development.
+4. Text the line from your phone, then check that `bridge/bin/imsg-bridge chats --json` lists the chat. Continue with steps 5 and 6 of the local install.
+
+## Install in photon mode
+
+1. In a Photon v2 project at [app.beta.photon.codes](https://app.beta.photon.codes), add an iMessage line and create a project API key (`pho_sk_…`). Note the project id (`pho_prj_…`).
+2. Install as in [006 Deployment](006-deployment.md), then `(cd bridge && pnpm install --frozen-lockfile)`.
+3. Write `IMSG_BRIDGE_MODE=photon`, `PHOTON_PROJECT_ID`, `PHOTON_API_KEY` and, when the project has more than one line, `PHOTON_IMESSAGE_LINE` (the line's number) to `~/.imsg-bridge/bridge.env` (see [Credentials](#credentials)), and give the service `IMSG_BRIDGE_CLI` (the absolute path of `bridge/bin/imsg-bridge`).
+4. Text the line from your phone, then check that `bridge/bin/imsg-bridge chats --json` lists the chat. Continue with steps 5 and 6 of the local install.
+
+## Credentials
+
+DeepSeek Harness strips variables whose names contain KEY, SECRET, TOKEN or PASSWORD from the commands it runs, the bridge included, so a Photon key in the service's environment never reaches it. The bridge reads such variables from `~/.imsg-bridge/bridge.env` (`$IMSG_BRIDGE_HOME/bridge.env`) instead: `NAME=value` lines, `#` comments allowed, and a variable set in the environment wins. The file must be readable by its user only; the bridge refuses it otherwise. Write it without the secret reaching your shell history:
+
+```sh
+mkdir -p ~/.imsg-bridge && read -s "key?Photon API key: " && echo &&
+  printf 'IMSG_BRIDGE_MODE=photon\nPHOTON_PROJECT_ID=pho_prj_…\nPHOTON_API_KEY=%s\n' "$key" > ~/.imsg-bridge/bridge.env &&
+  chmod 600 ~/.imsg-bridge/bridge.env && unset key
+```
+
 ## The deploy runner
 
 1. Register a self-hosted runner on the host for this repository only, under the user that runs the service, with the label `imsg-agent` (GitHub → Settings → Actions → Runners → New self-hosted runner). Run it as a launch agent so it survives a logout.
@@ -105,6 +133,6 @@ Keep the repository private while the runner is attached, or make sure no workfl
 ## Limits
 
 - Replies are plain text: the Channel flattens Markdown, and native polls, Tapbacks and rich links are not sent. A person answers a question by replying in words.
-- Local mode needs macOS and a logged-in user session; Messages does not run headless. Cloud mode removes that need but depends on Photon's service and its plan's limits.
-- In cloud mode, assessments read only the history `serve` has journaled, and inbound attachments are not read.
+- Local mode needs macOS and a logged-in user session; Messages does not run headless. The other modes remove that need but depend on Photon's service and its plan's limits.
+- In cloud mode, assessments read only the history `serve` has journaled. In the other modes, inbound attachments are not read.
 - A chat's Thread spans the whole chat, so two Tickets started in one chat share it. Eval and the Executors tell them apart as they do on any shared Thread.

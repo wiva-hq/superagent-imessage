@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@grpc/grpc-js':
+        specifier: 1.14.7
+        version: 1.14.7
+      '@photon-ai/advanced-imessage':
+        specifier: 2.4.0
+        version: 2.4.0(@grpc/grpc-js@1.14.7)(nice-grpc-common@2.0.4)(nice-grpc@2.1.18)
       '@photon-ai/imessage-kit':
         specifier: 3.0.0
         version: 3.0.0
@@ -20,6 +26,12 @@ importers:
       better-sqlite3:
         specifier: 12.5.0
         version: 12.5.0
+      nice-grpc:
+        specifier: 2.1.18
+        version: 2.1.18
+      nice-grpc-common:
+        specifier: 2.0.4
+        version: 2.0.4
     devDependencies:
       '@types/node':
         specifier: 22.20.0
